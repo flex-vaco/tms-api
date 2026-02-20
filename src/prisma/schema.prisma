@@ -1,0 +1,197 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Organisation {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  projects   Project[]
+  timesheets Timesheet[]
+  holidays   Holiday[]
+  settings   OrgSettings?
+}
+
+model OrgSettings {
+  id               Int      @id @default(autoincrement())
+  organisationId   Int      @unique
+  workWeekStart    String   @default("monday")
+  standardHours    Float    @default(8.0)
+  timeFormat       String   @default("decimal")
+  timeIncrement    Int      @default(30)
+  maxHoursPerDay   Float    @default(24.0)
+  maxHoursPerWeek  Float    @default(60.0)
+  requireApproval  Boolean  @default(true)
+  allowBackdated   Boolean  @default(true)
+  enableOvertime   Boolean  @default(true)
+  mandatoryDesc    Boolean  @default(false)
+  allowCopyWeek    Boolean  @default(true)
+  dailyReminderTime String?
+  weeklyDeadline   String?
+  payrollType      String?
+  pmType           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  organisationId Int
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           UserRole @default(EMPLOYEE)
+  department     String?
+  status         String   @default("active")
+  refreshToken   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation   @relation(fields: [organisationId], references: [id])
+  timesheets     Timesheet[]
+  approvals      Timesheet[]    @relation("ApprovedBy")
+  notifications  Notification[]
+
+  // Manager-employee hierarchy (many-to-many)
+  managedEmployees ManagerEmployee[] @relation("ManagedEmployees")
+  managers         ManagerEmployee[] @relation("Managers")
+
+  // Project-manager hierarchy (many-to-many)
+  managedProjects  ProjectManager[]  @relation("ManagedProjects")
+}
+
+model ManagerEmployee {
+  id         Int      @id @default(autoincrement())
+  managerId  Int
+  employeeId Int
+  createdAt  DateTime @default(now())
+
+  manager  User @relation("ManagedEmployees", fields: [managerId], references: [id])
+  employee User @relation("Managers", fields: [employeeId], references: [id])
+
+  @@unique([managerId, employeeId])
+  @@index([managerId])
+  @@index([employeeId])
+}
+
+enum UserRole {
+  EMPLOYEE
+  MANAGER
+  ADMIN
+}
+
+model Project {
+  id             Int      @id @default(autoincrement())
+  organisationId Int
+  code           String
+  name           String
+  client         String
+  budgetHours    Float    @default(0)
+  usedHours      Float    @default(0)
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+  timeEntries  TimeEntry[]
+  managers     ProjectManager[]
+
+  @@unique([organisationId, code])
+}
+
+model ProjectManager {
+  id         Int      @id @default(autoincrement())
+  projectId  Int
+  managerId  Int
+  createdAt  DateTime @default(now())
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  manager  User    @relation("ManagedProjects", fields: [managerId], references: [id])
+
+  @@unique([projectId, managerId])
+  @@index([projectId])
+  @@index([managerId])
+}
+
+model Timesheet {
+  id             Int             @id @default(autoincrement())
+  organisationId Int
+  userId         Int
+  weekStartDate  DateTime
+  weekEndDate    DateTime
+  status         TimesheetStatus @default(DRAFT)
+  totalHours     Float           @default(0)
+  billableHours  Float           @default(0)
+  approvedById   Int?
+  approvedAt     DateTime?
+  rejectedReason String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+  approvedBy   User?        @relation("ApprovedBy", fields: [approvedById], references: [id])
+  timeEntries  TimeEntry[]
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model TimeEntry {
+  id           Int      @id @default(autoincrement())
+  timesheetId  Int
+  projectId    Int
+  description  String?  @db.Text
+  billable     Boolean  @default(true)
+  monHours     Float    @default(0)
+  tueHours     Float    @default(0)
+  wedHours     Float    @default(0)
+  thuHours     Float    @default(0)
+  friHours     Float    @default(0)
+  satHours     Float    @default(0)
+  sunHours     Float    @default(0)
+  totalHours   Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id])
+}
+
+model Holiday {
+  id             Int      @id @default(autoincrement())
+  organisationId Int
+  name           String
+  date           DateTime
+  recurring      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

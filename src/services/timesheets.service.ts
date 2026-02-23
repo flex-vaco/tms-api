@@ -1,4 +1,4 @@
-import { TimesheetStatus } from '@prisma/client';
+import { TimesheetStatus, UserRole } from '@prisma/client';
 import { prisma } from '../utils/db';
 import { CreateTimesheetDto } from '../types';
 import {
@@ -11,6 +11,7 @@ import {
 import { AppError } from '../types/errors';
 import { getWeekStart, getWeekEnd, isInPast } from '../utils/dateHelpers';
 import { ERROR_CODES, DEFAULT_PAGE, DEFAULT_LIMIT } from '../utils/constants';
+import { getAssignedProjectIds } from './team.service';
 
 // Recalculates and persists totalHours + billableHours on a timesheet from its entries
 async function recalculateTimesheetTotals(timesheetId: number): Promise<void> {
@@ -130,7 +131,7 @@ export async function submitTimesheet(id: number, userId: number, orgId: number)
   });
 }
 
-export async function copyPreviousWeek(userId: number, orgId: number, targetWeekStart: string) {
+export async function copyPreviousWeek(userId: number, orgId: number, targetWeekStart: string, userRole: UserRole) {
   const settings = await prisma.orgSettings.findUnique({ where: { organisationId: orgId } });
   if (!settings?.allowCopyWeek) {
     throw new AppError('Copy Previous Week feature is disabled', 400, ERROR_CODES.COPY_WEEK_DISABLED);
@@ -160,15 +161,26 @@ export async function copyPreviousWeek(userId: number, orgId: number, targetWeek
   });
   if (existing) throw new ConflictError('A timesheet already exists for the target week');
 
+  // For EMPLOYEE, filter out entries for projects they are no longer assigned to
+  let entriesToCopy = previous.timeEntries;
+  let skippedCount = 0;
+  if (userRole === UserRole.EMPLOYEE) {
+    const assignedIds = await getAssignedProjectIds(userId, orgId);
+    const assignedSet = new Set(assignedIds);
+    const filtered = entriesToCopy.filter((e) => assignedSet.has(e.projectId));
+    skippedCount = entriesToCopy.length - filtered.length;
+    entriesToCopy = filtered;
+  }
+
   // Create new draft + copy entry rows (no hours — per spec)
   const newTimesheet = await prisma.$transaction(async (tx) => {
     const ts = await tx.timesheet.create({
       data: { userId, organisationId: orgId, weekStartDate, weekEndDate, status: TimesheetStatus.DRAFT },
     });
 
-    if (previous.timeEntries.length > 0) {
+    if (entriesToCopy.length > 0) {
       await tx.timeEntry.createMany({
-        data: previous.timeEntries.map((e) => ({
+        data: entriesToCopy.map((e) => ({
           timesheetId: ts.id,
           projectId: e.projectId,
           description: e.description,
@@ -180,7 +192,7 @@ export async function copyPreviousWeek(userId: number, orgId: number, targetWeek
     return ts;
   });
 
-  return newTimesheet;
+  return { ...newTimesheet, skippedCount };
 }
 
 // ---- Time Entry operations ----
@@ -214,7 +226,8 @@ export async function createEntry(
     projectId: number; description?: string; billable?: boolean;
     monHours?: number; tueHours?: number; wedHours?: number; thuHours?: number;
     friHours?: number; satHours?: number; sunHours?: number;
-  }
+  },
+  userRole: UserRole
 ) {
   const timesheet = await prisma.timesheet.findFirst({ where: { id: timesheetId, userId, organisationId: orgId } });
   if (!timesheet) throw new NotFoundError('Timesheet');
@@ -232,6 +245,16 @@ export async function createEntry(
   // Verify project belongs to org
   const project = await prisma.project.findFirst({ where: { id: dto.projectId, organisationId: orgId } });
   if (!project) throw new NotFoundError('Project');
+
+  // EMPLOYEE: verify project is assigned to this employee
+  if (userRole === UserRole.EMPLOYEE) {
+    const assignment = await prisma.projectEmployee.findFirst({
+      where: { projectId: dto.projectId, employeeId: userId },
+    });
+    if (!assignment) {
+      throw new AppError('You are not assigned to this project', 403, ERROR_CODES.EMPLOYEE_NOT_ASSIGNED);
+    }
+  }
 
   const totalHours = calcEntryTotal(dto);
 
@@ -260,7 +283,8 @@ export async function updateEntry(
   timesheetId: number, entryId: number, userId: number, orgId: number,
   dto: Partial<{ projectId: number; description: string; billable: boolean;
     monHours: number; tueHours: number; wedHours: number; thuHours: number;
-    friHours: number; satHours: number; sunHours: number; }>
+    friHours: number; satHours: number; sunHours: number; }>,
+  userRole: UserRole
 ) {
   const timesheet = await prisma.timesheet.findFirst({ where: { id: timesheetId, userId, organisationId: orgId } });
   if (!timesheet) throw new NotFoundError('Timesheet');
@@ -270,6 +294,16 @@ export async function updateEntry(
 
   const entry = await prisma.timeEntry.findFirst({ where: { id: entryId, timesheetId } });
   if (!entry) throw new NotFoundError('TimeEntry');
+
+  // EMPLOYEE: if changing project, verify the new project is assigned
+  if (dto.projectId !== undefined && userRole === UserRole.EMPLOYEE) {
+    const assignment = await prisma.projectEmployee.findFirst({
+      where: { projectId: dto.projectId, employeeId: userId },
+    });
+    if (!assignment) {
+      throw new AppError('You are not assigned to this project', 403, ERROR_CODES.EMPLOYEE_NOT_ASSIGNED);
+    }
+  }
 
   const merged = {
     monHours: dto.monHours ?? entry.monHours,

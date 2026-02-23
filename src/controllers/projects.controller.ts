@@ -17,7 +17,7 @@ export const create = tryCatch(async (req: Request, res: Response) => {
 
 export const update = tryCatch(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
-  const project = await projectsService.updateProject(id, req.user.orgId, req.body);
+  const project = await projectsService.updateProject(id, req.user.orgId, req.body, req.user.userId, req.user.role);
   res.status(HTTP_STATUS.OK).json({ success: true, data: project });
 });
 

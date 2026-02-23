@@ -122,6 +122,7 @@ export interface CreateProjectDto {
   budgetHours?: number;
   status?: string;
   managerIds?: number[];
+  employeeIds?: number[];
 }
 
 export interface UpdateProjectDto {
@@ -131,6 +132,7 @@ export interface UpdateProjectDto {
   budgetHours?: number;
   status?: string;
   managerIds?: number[];
+  employeeIds?: number[];
 }
 
 // ---- User DTOs ----
@@ -141,6 +143,7 @@ export interface CreateUserDto {
   role?: UserRole;
   department?: string;
   managerIds?: number[];
+  projectIds?: number[];
 }
 
 export interface UpdateUserDto {
@@ -149,6 +152,7 @@ export interface UpdateUserDto {
   department?: string;
   status?: string;
   managerIds?: number[];
+  projectIds?: number[];
 }
 
 // ---- Holiday DTOs ----

@@ -126,6 +126,100 @@ export async function removeAllManagedEmployees(managerId: number): Promise<void
   await prisma.managerEmployee.deleteMany({ where: { managerId } });
 }
 
+// ---- Project-Employee Assignment Functions ----
+
+/**
+ * Returns IDs of all projects assigned to a given employee within the org.
+ */
+export async function getAssignedProjectIds(employeeId: number, orgId: number): Promise<number[]> {
+  const rows = await prisma.projectEmployee.findMany({
+    where: {
+      employeeId,
+      project: { organisationId: orgId },
+    },
+    select: { projectId: true },
+  });
+  return rows.map((r) => r.projectId);
+}
+
+/**
+ * Replaces all employee assignments for a project.
+ * Validates that all employees are active users in the same org.
+ */
+export async function assignEmployeesToProject(
+  projectId: number,
+  employeeIds: number[],
+  orgId: number
+): Promise<void> {
+  if (employeeIds.length > 0) {
+    const validEmployees = await prisma.user.findMany({
+      where: {
+        id: { in: employeeIds },
+        organisationId: orgId,
+        status: 'active',
+      },
+      select: { id: true },
+    });
+    const validIds = new Set(validEmployees.map((e) => e.id));
+    const invalidIds = employeeIds.filter((id) => !validIds.has(id));
+    if (invalidIds.length > 0) {
+      throw new ValidationError(
+        `Invalid employee IDs: ${invalidIds.join(', ')}. Must be active users in the same organisation.`
+      );
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.projectEmployee.deleteMany({ where: { projectId } }),
+    ...(employeeIds.length > 0
+      ? [
+          prisma.projectEmployee.createMany({
+            data: employeeIds.map((employeeId) => ({ projectId, employeeId })),
+          }),
+        ]
+      : []),
+  ]);
+}
+
+/**
+ * Replaces all project assignments for an employee.
+ * Validates that all projects are active and in the same org.
+ */
+export async function assignProjectsToEmployee(
+  employeeId: number,
+  projectIds: number[],
+  orgId: number
+): Promise<void> {
+  if (projectIds.length > 0) {
+    const validProjects = await prisma.project.findMany({
+      where: {
+        id: { in: projectIds },
+        organisationId: orgId,
+        status: 'active',
+      },
+      select: { id: true },
+    });
+    const validIds = new Set(validProjects.map((p) => p.id));
+    const invalidIds = projectIds.filter((id) => !validIds.has(id));
+    if (invalidIds.length > 0) {
+      throw new ValidationError(
+        `Invalid project IDs: ${invalidIds.join(', ')}. Must be active projects in the same organisation.`
+      );
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.projectEmployee.deleteMany({ where: { employeeId } }),
+    ...(projectIds.length > 0
+      ? [
+          prisma.projectEmployee.createMany({
+            data: projectIds.map((projectId) => ({ projectId, employeeId })),
+          }),
+        ]
+      : []),
+  ]);
+}
+
 /**
  * Guard: checks if a given employee is a direct report of the requesting manager.
  * Throws ForbiddenError if not.

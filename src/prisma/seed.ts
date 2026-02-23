@@ -159,6 +159,25 @@ async function main(): Promise<void> {
     create: { projectId: project1.id, managerId: admin.id },
   });
 
+  // ---- Project-Employee Assignments ----
+  // Carol Employee assigned to project1
+  await prisma.projectEmployee.upsert({
+    where: { projectId_employeeId: { projectId: project1.id, employeeId: employee.id } },
+    update: {},
+    create: { projectId: project1.id, employeeId: employee.id },
+  });
+  // Dave Developer assigned to both projects
+  await prisma.projectEmployee.upsert({
+    where: { projectId_employeeId: { projectId: project1.id, employeeId: employee2.id } },
+    update: {},
+    create: { projectId: project1.id, employeeId: employee2.id },
+  });
+  await prisma.projectEmployee.upsert({
+    where: { projectId_employeeId: { projectId: project2.id, employeeId: employee2.id } },
+    update: {},
+    create: { projectId: project2.id, employeeId: employee2.id },
+  });
+
   // ---- Holidays ----
   await prisma.holiday.upsert({
     where: { id: 1 },
@@ -270,6 +289,15 @@ async function main(): Promise<void> {
   console.log('  Bob Manager   → PRJ-2026-001, PRJ-2026-002');
   // eslint-disable-next-line no-console
   console.log('  Alice Admin   → PRJ-2026-001');
+
+  // eslint-disable-next-line no-console
+  console.log('');
+  // eslint-disable-next-line no-console
+  console.log('Project-Employee assignments:');
+  // eslint-disable-next-line no-console
+  console.log('  Carol Employee → PRJ-2026-001');
+  // eslint-disable-next-line no-console
+  console.log('  Dave Developer → PRJ-2026-001, PRJ-2026-002');
 
   void admin;
   void employee2;

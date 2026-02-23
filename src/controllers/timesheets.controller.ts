@@ -41,7 +41,7 @@ export const submit = tryCatch(async (req: Request, res: Response) => {
 
 export const copyPreviousWeek = tryCatch(async (req: Request, res: Response) => {
   const { targetWeekStart } = req.body as { targetWeekStart: string };
-  const timesheet = await timesheetsService.copyPreviousWeek(req.user.userId, req.user.orgId, targetWeekStart);
+  const timesheet = await timesheetsService.copyPreviousWeek(req.user.userId, req.user.orgId, targetWeekStart, req.user.role);
   res.status(HTTP_STATUS.CREATED).json({ success: true, data: timesheet });
 });
 
@@ -55,14 +55,14 @@ export const listEntries = tryCatch(async (req: Request, res: Response) => {
 
 export const createEntry = tryCatch(async (req: Request, res: Response) => {
   const timesheetId = parseInt(req.params.id);
-  const entry = await timesheetsService.createEntry(timesheetId, req.user.userId, req.user.orgId, req.body);
+  const entry = await timesheetsService.createEntry(timesheetId, req.user.userId, req.user.orgId, req.body, req.user.role);
   res.status(HTTP_STATUS.CREATED).json({ success: true, data: entry });
 });
 
 export const updateEntry = tryCatch(async (req: Request, res: Response) => {
   const timesheetId = parseInt(req.params.id);
   const entryId = parseInt(req.params.eid);
-  const entry = await timesheetsService.updateEntry(timesheetId, entryId, req.user.userId, req.user.orgId, req.body);
+  const entry = await timesheetsService.updateEntry(timesheetId, entryId, req.user.userId, req.user.orgId, req.body, req.user.role);
   res.status(HTTP_STATUS.OK).json({ success: true, data: entry });
 });
 

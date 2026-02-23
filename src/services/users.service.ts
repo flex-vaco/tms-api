@@ -4,7 +4,7 @@ import { prisma } from '../utils/db';
 import { CreateUserDto, UpdateUserDto } from '../types';
 import { NotFoundError, ConflictError, ForbiddenError } from '../types/errors';
 import { DEFAULT_PAGE, DEFAULT_LIMIT, ERROR_CODES } from '../utils/constants';
-import { assignManagers, removeAllManagedEmployees, getDirectReportIds } from './team.service';
+import { assignManagers, removeAllManagedEmployees, getDirectReportIds, assignProjectsToEmployee } from './team.service';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -14,6 +14,11 @@ const USER_SELECT = {
   managers: {
     select: {
       manager: { select: { id: true, name: true } },
+    },
+  },
+  assignedProjects: {
+    select: {
+      project: { select: { id: true, name: true, code: true } },
     },
   },
 } as const;
@@ -106,6 +111,23 @@ export async function createUser(
     await assignManagers(user.id, dto.managerIds, orgId);
   }
 
+  // Assign projects if provided
+  if (dto.projectIds?.length) {
+    // MANAGER can only assign projects they manage
+    if (requestingRole === UserRole.MANAGER) {
+      const managedProjectRows = await prisma.projectManager.findMany({
+        where: { managerId: requestingUserId, project: { organisationId: orgId } },
+        select: { projectId: true },
+      });
+      const managedIds = new Set(managedProjectRows.map((r) => r.projectId));
+      const unauthorized = dto.projectIds.filter((pid) => !managedIds.has(pid));
+      if (unauthorized.length > 0) {
+        throw new ForbiddenError('Managers can only assign projects they manage');
+      }
+    }
+    await assignProjectsToEmployee(user.id, dto.projectIds, orgId);
+  }
+
   return user;
 }
 
@@ -126,7 +148,7 @@ export async function updateUser(
     throw new ForbiddenError('Managers can only assign the Employee role');
   }
 
-  const { managerIds, ...updateData } = dto;
+  const { managerIds, projectIds, ...updateData } = dto;
 
   const updated = await prisma.user.update({
     where: { id },
@@ -146,6 +168,23 @@ export async function updateUser(
   // Update manager assignments if provided
   if (managerIds !== undefined) {
     await assignManagers(id, managerIds, orgId);
+  }
+
+  // Update project assignments if provided
+  if (projectIds !== undefined) {
+    // MANAGER can only assign projects they manage
+    if (requestingRole === UserRole.MANAGER) {
+      const managedProjectRows = await prisma.projectManager.findMany({
+        where: { managerId: requestingUserId, project: { organisationId: orgId } },
+        select: { projectId: true },
+      });
+      const managedIds = new Set(managedProjectRows.map((r) => r.projectId));
+      const unauthorized = projectIds.filter((pid) => !managedIds.has(pid));
+      if (unauthorized.length > 0) {
+        throw new ForbiddenError('Managers can only assign projects they manage');
+      }
+    }
+    await assignProjectsToEmployee(id, projectIds, orgId);
   }
 
   return updated;

@@ -2,13 +2,12 @@ import { TimesheetStatus, UserRole } from '@prisma/client';
 import { prisma } from '../utils/db';
 import { CreateTimesheetDto } from '../types';
 import {
+  AppError,
   NotFoundError,
   ConflictError,
   ImmutableTimesheetError,
   InvalidTransitionError,
-  ValidationError,
 } from '../types/errors';
-import { AppError } from '../types/errors';
 import { getWeekStart, getWeekEnd, isInPast } from '../utils/dateHelpers';
 import { ERROR_CODES, DEFAULT_PAGE, DEFAULT_LIMIT } from '../utils/constants';
 import { getAssignedProjectIds } from './team.service';
@@ -131,7 +130,7 @@ export async function submitTimesheet(id: number, userId: number, orgId: number)
   });
 }
 
-export async function copyPreviousWeek(userId: number, orgId: number, targetWeekStart: string, userRole: UserRole) {
+export async function copyPreviousWeek(userId: number, orgId: number, targetWeekStart: string, userRole: UserRole, force = false) {
   const settings = await prisma.orgSettings.findUnique({ where: { organisationId: orgId } });
   if (!settings?.allowCopyWeek) {
     throw new AppError('Copy Previous Week feature is disabled', 400, ERROR_CODES.COPY_WEEK_DISABLED);
@@ -155,11 +154,22 @@ export async function copyPreviousWeek(userId: number, orgId: number, targetWeek
   const weekStartDate = getWeekStart(inputDate, startDay);
   const weekEndDate = getWeekEnd(weekStartDate, startDay);
 
-  // Ensure no existing timesheet for the target week
   const existing = await prisma.timesheet.findFirst({
     where: { userId, organisationId: orgId, weekStartDate },
   });
-  if (existing) throw new ConflictError('A timesheet already exists for the target week');
+
+  if (existing && !force) {
+    throw new ConflictError('A timesheet already exists for the target week');
+  }
+
+  // Only DRAFT timesheets may be overwritten
+  if (existing && force && existing.status !== TimesheetStatus.DRAFT) {
+    throw new AppError(
+      `Cannot overwrite a ${existing.status.toLowerCase()} timesheet`,
+      403,
+      ERROR_CODES.IMMUTABLE_TIMESHEET
+    );
+  }
 
   // For EMPLOYEE, filter out entries for projects they are no longer assigned to
   let entriesToCopy = previous.timeEntries;
@@ -172,21 +182,38 @@ export async function copyPreviousWeek(userId: number, orgId: number, targetWeek
     entriesToCopy = filtered;
   }
 
-  // Create new draft + copy entry rows (no hours — per spec)
+  const entryData = entriesToCopy.map((e) => ({
+    projectId: e.projectId,
+    description: e.description,
+    billable: e.billable,
+    // Hours intentionally not copied per business rule #6
+  }));
+
+  if (existing && force) {
+    // Overwrite: replace all entries in the existing DRAFT timesheet and reset totals
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.timeEntry.deleteMany({ where: { timesheetId: existing.id } });
+      if (entryData.length > 0) {
+        await tx.timeEntry.createMany({
+          data: entryData.map((e) => ({ ...e, timesheetId: existing.id })),
+        });
+      }
+      return tx.timesheet.update({
+        where: { id: existing.id },
+        data: { totalHours: 0, billableHours: 0 },
+      });
+    });
+    return { ...updated, skippedCount };
+  }
+
+  // Create new draft + copy entry rows
   const newTimesheet = await prisma.$transaction(async (tx) => {
     const ts = await tx.timesheet.create({
       data: { userId, organisationId: orgId, weekStartDate, weekEndDate, status: TimesheetStatus.DRAFT },
     });
-
-    if (entriesToCopy.length > 0) {
+    if (entryData.length > 0) {
       await tx.timeEntry.createMany({
-        data: entriesToCopy.map((e) => ({
-          timesheetId: ts.id,
-          projectId: e.projectId,
-          description: e.description,
-          billable: e.billable,
-          // Hours intentionally not copied per business rule #6
-        })),
+        data: entryData.map((e) => ({ ...e, timesheetId: ts.id })),
       });
     }
     return ts;

@@ -40,8 +40,8 @@ export const submit = tryCatch(async (req: Request, res: Response) => {
 });
 
 export const copyPreviousWeek = tryCatch(async (req: Request, res: Response) => {
-  const { targetWeekStart } = req.body as { targetWeekStart: string };
-  const timesheet = await timesheetsService.copyPreviousWeek(req.user.userId, req.user.orgId, targetWeekStart, req.user.role);
+  const { targetWeekStart, force } = req.body as { targetWeekStart: string; force?: boolean };
+  const timesheet = await timesheetsService.copyPreviousWeek(req.user.userId, req.user.orgId, targetWeekStart, req.user.role, force === true);
   res.status(HTTP_STATUS.CREATED).json({ success: true, data: timesheet });
 });
 

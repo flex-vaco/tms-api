@@ -4,6 +4,11 @@ import { logger } from './logger';
 // Singleton Prisma client — prevents multiple connections during hot reload in dev
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
+//const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME } = process.env;
+
+// Use encodeURIComponent to handle the '@' automatically
+//const dbUrl = `mysql://${DB_USER}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({

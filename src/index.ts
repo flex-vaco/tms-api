@@ -28,7 +28,9 @@ const API_PREFIX = '/api/v1';
 // ---- Security & parsing middleware ----
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  origin: 'http://15.206.232.42:5605', // Your frontend IP and port
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Required for httpOnly cookie exchange
 }));
 app.use(express.json());
@@ -65,8 +67,8 @@ app.use(errorHandler);
 // ---- Bootstrap ----
 async function start(): Promise<void> {
   await connectDB();
-  const server = app.listen(PORT, () => {
-    logger.info(`Highspring India TMS API running on port ${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`Highspring India TMS API running on port http://0.0.0.0:${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV ?? 'development'}`);
   });
 

@@ -186,11 +186,23 @@ export async function copyPreviousWeek(userId: number, orgId: number, targetWeek
     projectId: e.projectId,
     description: e.description,
     billable: e.billable,
-    // Hours intentionally not copied per business rule #6
+    monHours: e.monHours,
+    tueHours: e.tueHours,
+    wedHours: e.wedHours,
+    thuHours: e.thuHours,
+    friHours: e.friHours,
+    satHours: e.satHours,
+    sunHours: e.sunHours,
+    totalHours: e.totalHours,
   }));
 
+  const copiedTotalHours = entryData.reduce((sum, e) => sum + e.totalHours, 0);
+  const copiedBillableHours = entryData
+    .filter((e) => e.billable)
+    .reduce((sum, e) => sum + e.totalHours, 0);
+
   if (existing && force) {
-    // Overwrite: replace all entries in the existing DRAFT timesheet and reset totals
+    // Overwrite: replace all entries in the existing DRAFT timesheet and recalculate totals
     const updated = await prisma.$transaction(async (tx) => {
       await tx.timeEntry.deleteMany({ where: { timesheetId: existing.id } });
       if (entryData.length > 0) {
@@ -200,16 +212,24 @@ export async function copyPreviousWeek(userId: number, orgId: number, targetWeek
       }
       return tx.timesheet.update({
         where: { id: existing.id },
-        data: { totalHours: 0, billableHours: 0 },
+        data: { totalHours: copiedTotalHours, billableHours: copiedBillableHours },
       });
     });
     return { ...updated, skippedCount };
   }
 
-  // Create new draft + copy entry rows
+  // Create new draft + copy entry rows with hours
   const newTimesheet = await prisma.$transaction(async (tx) => {
     const ts = await tx.timesheet.create({
-      data: { userId, organisationId: orgId, weekStartDate, weekEndDate, status: TimesheetStatus.DRAFT },
+      data: {
+        userId,
+        organisationId: orgId,
+        weekStartDate,
+        weekEndDate,
+        status: TimesheetStatus.DRAFT,
+        totalHours: copiedTotalHours,
+        billableHours: copiedBillableHours,
+      },
     });
     if (entryData.length > 0) {
       await tx.timeEntry.createMany({

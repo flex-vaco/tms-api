@@ -28,7 +28,7 @@ const API_PREFIX = '/api/v1';
 // ---- Security & parsing middleware ----
 app.use(helmet());
 app.use(cors({
-  origin: 'http://15.206.232.42:5605', // Your frontend IP and port
+  origin: process.env.CORS_ORIGIN, // Your frontend IP and port
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Required for httpOnly cookie exchange

@@ -174,15 +174,21 @@ model TimeEntry {
   id           Int      @id @default(autoincrement())
   timesheetId  Int
   projectId    Int
-  description  String?  @db.Text
   billable     Boolean  @default(true)
   monHours     Float    @default(0)
+  monDesc      String?  @db.Text
   tueHours     Float    @default(0)
+  tueDesc      String?  @db.Text
   wedHours     Float    @default(0)
+  wedDesc      String?  @db.Text
   thuHours     Float    @default(0)
+  thuDesc      String?  @db.Text
   friHours     Float    @default(0)
+  friDesc      String?  @db.Text
   satHours     Float    @default(0)
+  satDesc      String?  @db.Text
   sunHours     Float    @default(0)
+  sunDesc      String?  @db.Text
   totalHours   Float    @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

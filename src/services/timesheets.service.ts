@@ -184,15 +184,14 @@ export async function copyPreviousWeek(userId: number, orgId: number, targetWeek
 
   const entryData = entriesToCopy.map((e) => ({
     projectId: e.projectId,
-    description: e.description,
     billable: e.billable,
-    monHours: e.monHours,
-    tueHours: e.tueHours,
-    wedHours: e.wedHours,
-    thuHours: e.thuHours,
-    friHours: e.friHours,
-    satHours: e.satHours,
-    sunHours: e.sunHours,
+    monHours: e.monHours, monDesc: (e as Record<string, unknown>).monDesc as string | null ?? null,
+    tueHours: e.tueHours, tueDesc: (e as Record<string, unknown>).tueDesc as string | null ?? null,
+    wedHours: e.wedHours, wedDesc: (e as Record<string, unknown>).wedDesc as string | null ?? null,
+    thuHours: e.thuHours, thuDesc: (e as Record<string, unknown>).thuDesc as string | null ?? null,
+    friHours: e.friHours, friDesc: (e as Record<string, unknown>).friDesc as string | null ?? null,
+    satHours: e.satHours, satDesc: (e as Record<string, unknown>).satDesc as string | null ?? null,
+    sunHours: e.sunHours, sunDesc: (e as Record<string, unknown>).sunDesc as string | null ?? null,
     totalHours: e.totalHours,
   }));
 
@@ -270,9 +269,14 @@ function calcEntryTotal(data: {
 export async function createEntry(
   timesheetId: number, userId: number, orgId: number,
   dto: {
-    projectId: number; description?: string; billable?: boolean;
-    monHours?: number; tueHours?: number; wedHours?: number; thuHours?: number;
-    friHours?: number; satHours?: number; sunHours?: number;
+    projectId: number; billable?: boolean;
+    monHours?: number; monDesc?: string;
+    tueHours?: number; tueDesc?: string;
+    wedHours?: number; wedDesc?: string;
+    thuHours?: number; thuDesc?: string;
+    friHours?: number; friDesc?: string;
+    satHours?: number; satDesc?: string;
+    sunHours?: number; sunDesc?: string;
   },
   userRole: UserRole
 ) {
@@ -284,9 +288,20 @@ export async function createEntry(
 
   const settings = await prisma.orgSettings.findUnique({ where: { organisationId: orgId } });
 
-  // Mandatory description check
-  if (settings?.mandatoryDesc && !dto.description?.trim()) {
-    throw new AppError('Description is required', 400, ERROR_CODES.DESCRIPTION_REQUIRED);
+  // Mandatory description check — every day that has hours logged must also have a description
+  if (settings?.mandatoryDesc) {
+    const dayPairs = [
+      { hours: dto.monHours, desc: dto.monDesc },
+      { hours: dto.tueHours, desc: dto.tueDesc },
+      { hours: dto.wedHours, desc: dto.wedDesc },
+      { hours: dto.thuHours, desc: dto.thuDesc },
+      { hours: dto.friHours, desc: dto.friDesc },
+      { hours: dto.satHours, desc: dto.satDesc },
+      { hours: dto.sunHours, desc: dto.sunDesc },
+    ];
+    if (dayPairs.some(({ hours, desc }) => (hours ?? 0) > 0 && !desc?.trim())) {
+      throw new AppError('Description is required for each day with logged hours', 400, ERROR_CODES.DESCRIPTION_REQUIRED);
+    }
   }
 
   // Verify project belongs to org
@@ -318,7 +333,19 @@ export async function createEntry(
   }
 
   const entry = await prisma.timeEntry.create({
-    data: { timesheetId, projectId: dto.projectId, description: dto.description, billable: dto.billable ?? true, ...dto, totalHours },
+    data: {
+      timesheetId,
+      projectId: dto.projectId,
+      billable: dto.billable ?? true,
+      monHours: dto.monHours, monDesc: dto.monDesc,
+      tueHours: dto.tueHours, tueDesc: dto.tueDesc,
+      wedHours: dto.wedHours, wedDesc: dto.wedDesc,
+      thuHours: dto.thuHours, thuDesc: dto.thuDesc,
+      friHours: dto.friHours, friDesc: dto.friDesc,
+      satHours: dto.satHours, satDesc: dto.satDesc,
+      sunHours: dto.sunHours, sunDesc: dto.sunDesc,
+      totalHours,
+    },
     include: { project: true },
   });
 
@@ -328,9 +355,16 @@ export async function createEntry(
 
 export async function updateEntry(
   timesheetId: number, entryId: number, userId: number, orgId: number,
-  dto: Partial<{ projectId: number; description: string; billable: boolean;
-    monHours: number; tueHours: number; wedHours: number; thuHours: number;
-    friHours: number; satHours: number; sunHours: number; }>,
+  dto: Partial<{
+    projectId: number; billable: boolean;
+    monHours: number; monDesc: string;
+    tueHours: number; tueDesc: string;
+    wedHours: number; wedDesc: string;
+    thuHours: number; thuDesc: string;
+    friHours: number; friDesc: string;
+    satHours: number; satDesc: string;
+    sunHours: number; sunDesc: string;
+  }>,
   userRole: UserRole
 ) {
   const timesheet = await prisma.timesheet.findFirst({ where: { id: timesheetId, userId, organisationId: orgId } });
@@ -354,12 +388,19 @@ export async function updateEntry(
 
   const merged = {
     monHours: dto.monHours ?? entry.monHours,
+    monDesc:  'monDesc' in dto ? dto.monDesc : entry.monDesc,
     tueHours: dto.tueHours ?? entry.tueHours,
+    tueDesc:  'tueDesc' in dto ? dto.tueDesc : entry.tueDesc,
     wedHours: dto.wedHours ?? entry.wedHours,
+    wedDesc:  'wedDesc' in dto ? dto.wedDesc : entry.wedDesc,
     thuHours: dto.thuHours ?? entry.thuHours,
+    thuDesc:  'thuDesc' in dto ? dto.thuDesc : entry.thuDesc,
     friHours: dto.friHours ?? entry.friHours,
+    friDesc:  'friDesc' in dto ? dto.friDesc : entry.friDesc,
     satHours: dto.satHours ?? entry.satHours,
+    satDesc:  'satDesc' in dto ? dto.satDesc : entry.satDesc,
     sunHours: dto.sunHours ?? entry.sunHours,
+    sunDesc:  'sunDesc' in dto ? dto.sunDesc : entry.sunDesc,
   };
   const totalHours = calcEntryTotal(merged);
 

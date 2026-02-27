@@ -35,29 +35,41 @@ export const updateTimesheetSchema = z
 // ---- Time Entries ----
 export const createTimeEntrySchema = z.object({
   projectId: z.number({ required_error: 'projectId is required' }).int().positive(),
-  description: z.string().optional(),
   billable: z.boolean().optional(),
   monHours: hourValue.optional(),
+  monDesc: z.string().optional(),
   tueHours: hourValue.optional(),
+  tueDesc: z.string().optional(),
   wedHours: hourValue.optional(),
+  wedDesc: z.string().optional(),
   thuHours: hourValue.optional(),
+  thuDesc: z.string().optional(),
   friHours: hourValue.optional(),
+  friDesc: z.string().optional(),
   satHours: hourValue.optional(),
+  satDesc: z.string().optional(),
   sunHours: hourValue.optional(),
+  sunDesc: z.string().optional(),
 });
 
 export const updateTimeEntrySchema = z
   .object({
     projectId: z.number().int().positive().optional(),
-    description: z.string().optional(),
     billable: z.boolean().optional(),
     monHours: hourValue.optional(),
+    monDesc: z.string().optional(),
     tueHours: hourValue.optional(),
+    tueDesc: z.string().optional(),
     wedHours: hourValue.optional(),
+    wedDesc: z.string().optional(),
     thuHours: hourValue.optional(),
+    thuDesc: z.string().optional(),
     friHours: hourValue.optional(),
+    friDesc: z.string().optional(),
     satHours: hourValue.optional(),
+    satDesc: z.string().optional(),
     sunHours: hourValue.optional(),
+    sunDesc: z.string().optional(),
   })
   .strict();
 

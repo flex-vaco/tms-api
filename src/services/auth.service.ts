@@ -98,7 +98,7 @@ export async function loginUser(dto: LoginDto): Promise<AuthResult> {
   };
 }
 
-export async function refreshAccessToken(incomingRefreshToken: string): Promise<{ accessToken: string; userId: number }> {
+export async function refreshAccessToken(incomingRefreshToken: string): Promise<{ accessToken: string; refreshToken: string; userId: number }> {
   const secret = process.env.JWT_REFRESH_SECRET!;
   let payload: JwtPayload;
 
@@ -115,13 +115,22 @@ export async function refreshAccessToken(incomingRefreshToken: string): Promise<
 
   const tokenMatch = await bcrypt.compare(incomingRefreshToken, user.refreshToken);
   if (!tokenMatch) {
+    // Possible token reuse — wipe stored token to force re-login
+    await prisma.user.update({ where: { id: payload.userId }, data: { refreshToken: null } });
     throw new UnauthorizedError('Refresh token mismatch');
   }
 
   const newPayload: JwtPayload = { userId: user.id, orgId: user.organisationId, role: user.role };
   const accessToken = signAccessToken(newPayload);
+  const refreshToken = signRefreshToken(newPayload);
 
-  return { accessToken, userId: user.id };
+  // Rotate: replace stored hash with the new token's hash
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: await bcrypt.hash(refreshToken, BCRYPT_ROUNDS) },
+  });
+
+  return { accessToken, refreshToken, userId: user.id };
 }
 
 export async function logoutUser(userId: number): Promise<void> {

@@ -29,7 +29,8 @@ export const refresh = tryCatch(async (req: Request, res: Response) => {
     res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, error: 'No refresh token', code: 'UNAUTHORIZED' });
     return;
   }
-  const { accessToken, userId } = await authService.refreshAccessToken(token);
+  const { accessToken, refreshToken, userId } = await authService.refreshAccessToken(token);
+  res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, COOKIE_OPTIONS);
   // Return user data so AuthContext can restore session on page refresh
   const dbUser = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, organisationId: true, role: true, name: true, email: true } });
   const user = dbUser

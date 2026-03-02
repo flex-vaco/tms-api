@@ -29,6 +29,7 @@ export interface MonthlyDayRow {
   time: number;
   overtime: number;
   totalTime: number;
+  timeOffHours: number;
   isHoliday: boolean;
   holidayName?: string;
   isLeave: boolean;
@@ -285,7 +286,7 @@ export async function generateMonthlyTimesheetExcel(data: MonthlyTimesheetData):
       row.getCell('D').value = day.task;
     }
 
-    row.getCell('E').value = day.time || '';
+    row.getCell('E').value = day.isLeave ? (day.timeOffHours || '') : (day.time || '');
     row.getCell('E').alignment = { horizontal: 'center' };
     row.getCell('F').value = day.overtime || '';
     row.getCell('F').alignment = { horizontal: 'center' };

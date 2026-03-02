@@ -177,18 +177,25 @@ model TimeEntry {
   billable     Boolean  @default(true)
   monHours     Float    @default(0)
   monDesc      String?  @db.Text
+  monTimeOff   Float    @default(0)
   tueHours     Float    @default(0)
   tueDesc      String?  @db.Text
+  tueTimeOff   Float    @default(0)
   wedHours     Float    @default(0)
   wedDesc      String?  @db.Text
+  wedTimeOff   Float    @default(0)
   thuHours     Float    @default(0)
   thuDesc      String?  @db.Text
+  thuTimeOff   Float    @default(0)
   friHours     Float    @default(0)
   friDesc      String?  @db.Text
+  friTimeOff   Float    @default(0)
   satHours     Float    @default(0)
   satDesc      String?  @db.Text
+  satTimeOff   Float    @default(0)
   sunHours     Float    @default(0)
   sunDesc      String?  @db.Text
+  sunTimeOff   Float    @default(0)
   totalHours   Float    @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

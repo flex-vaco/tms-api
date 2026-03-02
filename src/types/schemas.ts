@@ -7,6 +7,7 @@ const isoDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be a valid date in YYYY-MM-DD format');
 
 const hourValue = z.number().min(0).max(24);
+const timeOffValue = z.number().min(0).max(8);
 
 // ---- Auth ----
 export const registerSchema = z.object({
@@ -38,18 +39,25 @@ export const createTimeEntrySchema = z.object({
   billable: z.boolean().optional(),
   monHours: hourValue.optional(),
   monDesc: z.string().optional(),
+  monTimeOff: timeOffValue.optional(),
   tueHours: hourValue.optional(),
   tueDesc: z.string().optional(),
+  tueTimeOff: timeOffValue.optional(),
   wedHours: hourValue.optional(),
   wedDesc: z.string().optional(),
+  wedTimeOff: timeOffValue.optional(),
   thuHours: hourValue.optional(),
   thuDesc: z.string().optional(),
+  thuTimeOff: timeOffValue.optional(),
   friHours: hourValue.optional(),
   friDesc: z.string().optional(),
+  friTimeOff: timeOffValue.optional(),
   satHours: hourValue.optional(),
   satDesc: z.string().optional(),
+  satTimeOff: timeOffValue.optional(),
   sunHours: hourValue.optional(),
   sunDesc: z.string().optional(),
+  sunTimeOff: timeOffValue.optional(),
 });
 
 export const updateTimeEntrySchema = z
@@ -58,18 +66,25 @@ export const updateTimeEntrySchema = z
     billable: z.boolean().optional(),
     monHours: hourValue.optional(),
     monDesc: z.string().optional(),
+    monTimeOff: timeOffValue.optional(),
     tueHours: hourValue.optional(),
     tueDesc: z.string().optional(),
+    tueTimeOff: timeOffValue.optional(),
     wedHours: hourValue.optional(),
     wedDesc: z.string().optional(),
+    wedTimeOff: timeOffValue.optional(),
     thuHours: hourValue.optional(),
     thuDesc: z.string().optional(),
+    thuTimeOff: timeOffValue.optional(),
     friHours: hourValue.optional(),
     friDesc: z.string().optional(),
+    friTimeOff: timeOffValue.optional(),
     satHours: hourValue.optional(),
     satDesc: z.string().optional(),
+    satTimeOff: timeOffValue.optional(),
     sunHours: hourValue.optional(),
     sunDesc: z.string().optional(),
+    sunTimeOff: timeOffValue.optional(),
   })
   .strict();
 

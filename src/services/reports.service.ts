@@ -175,6 +175,7 @@ export async function generateMonthlyTimesheetData(
 
     // Find which timesheet covers this day
     let dayHours = 0;
+    let dayTimeOff = 0;
     const projectNames: string[] = [];
     const taskDescs: string[] = [];
     let isLeave = false;
@@ -184,22 +185,32 @@ export async function generateMonthlyTimesheetData(
       const dayKey = getDayKeyForDate(date, wsDate);
       if (!dayKey) continue;
 
+      // Derive the parallel desc and time-off keys from the hours key
+      const dayDescKey = dayKey.replace('Hours', 'Desc') as keyof typeof ts.timeEntries[0];
+      const dayTimeOffKey = dayKey.replace('Hours', 'TimeOff') as keyof typeof ts.timeEntries[0];
+
       for (const entry of ts.timeEntries) {
         const hours = entry[dayKey] as number;
+        const timeOff = (entry[dayTimeOffKey] as number | undefined) ?? 0;
+
         if (hours > 0) {
           dayHours += hours;
           const pName = entry.project?.name ?? '';
           if (pName && !projectNames.includes(pName)) projectNames.push(pName);
-          const dayDescKey = dayKey.replace('Hours', 'Desc') as keyof typeof entry;
           const desc = entry[dayDescKey] as string | null | undefined;
           if (desc && !taskDescs.includes(desc)) taskDescs.push(desc);
 
-          // Detect leave rows by project name/code convention
+          // Detect leave rows by project name/code convention (backward compat)
           const pLower = pName.toLowerCase();
           const codeLower = (entry.project?.code ?? '').toLowerCase();
           if (pLower.includes('leave') || codeLower.includes('leave')) {
             isLeave = true;
           }
+        }
+
+        if (timeOff > 0) {
+          dayTimeOff += timeOff;
+          isLeave = true;
         }
       }
     }
@@ -224,6 +235,7 @@ export async function generateMonthlyTimesheetData(
       time: isHoliday || isLeave ? 0 : regularHours,
       overtime,
       totalTime: isHoliday || isLeave ? 0 : dayHours,
+      timeOffHours: dayTimeOff,
       isHoliday,
       holidayName,
       isLeave,

@@ -79,18 +79,25 @@ export interface CreateTimeEntryDto {
   billable?: boolean;
   monHours?: number;
   monDesc?: string;
+  monTimeOff?: number;
   tueHours?: number;
   tueDesc?: string;
+  tueTimeOff?: number;
   wedHours?: number;
   wedDesc?: string;
+  wedTimeOff?: number;
   thuHours?: number;
   thuDesc?: string;
+  thuTimeOff?: number;
   friHours?: number;
   friDesc?: string;
+  friTimeOff?: number;
   satHours?: number;
   satDesc?: string;
+  satTimeOff?: number;
   sunHours?: number;
   sunDesc?: string;
+  sunTimeOff?: number;
 }
 
 export interface UpdateTimeEntryDto {
@@ -98,18 +105,25 @@ export interface UpdateTimeEntryDto {
   billable?: boolean;
   monHours?: number;
   monDesc?: string;
+  monTimeOff?: number;
   tueHours?: number;
   tueDesc?: string;
+  tueTimeOff?: number;
   wedHours?: number;
   wedDesc?: string;
+  wedTimeOff?: number;
   thuHours?: number;
   thuDesc?: string;
+  thuTimeOff?: number;
   friHours?: number;
   friDesc?: string;
+  friTimeOff?: number;
   satHours?: number;
   satDesc?: string;
+  satTimeOff?: number;
   sunHours?: number;
   sunDesc?: string;
+  sunTimeOff?: number;
 }
 
 // ---- Approval DTOs ----

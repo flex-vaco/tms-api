@@ -270,13 +270,13 @@ export async function createEntry(
   timesheetId: number, userId: number, orgId: number,
   dto: {
     projectId: number; billable?: boolean;
-    monHours?: number; monDesc?: string;
-    tueHours?: number; tueDesc?: string;
-    wedHours?: number; wedDesc?: string;
-    thuHours?: number; thuDesc?: string;
-    friHours?: number; friDesc?: string;
-    satHours?: number; satDesc?: string;
-    sunHours?: number; sunDesc?: string;
+    monHours?: number; monDesc?: string; monTimeOff?: number;
+    tueHours?: number; tueDesc?: string; tueTimeOff?: number;
+    wedHours?: number; wedDesc?: string; wedTimeOff?: number;
+    thuHours?: number; thuDesc?: string; thuTimeOff?: number;
+    friHours?: number; friDesc?: string; friTimeOff?: number;
+    satHours?: number; satDesc?: string; satTimeOff?: number;
+    sunHours?: number; sunDesc?: string; sunTimeOff?: number;
   },
   userRole: UserRole
 ) {
@@ -337,13 +337,13 @@ export async function createEntry(
       timesheetId,
       projectId: dto.projectId,
       billable: dto.billable ?? true,
-      monHours: dto.monHours, monDesc: dto.monDesc,
-      tueHours: dto.tueHours, tueDesc: dto.tueDesc,
-      wedHours: dto.wedHours, wedDesc: dto.wedDesc,
-      thuHours: dto.thuHours, thuDesc: dto.thuDesc,
-      friHours: dto.friHours, friDesc: dto.friDesc,
-      satHours: dto.satHours, satDesc: dto.satDesc,
-      sunHours: dto.sunHours, sunDesc: dto.sunDesc,
+      monHours: dto.monHours, monDesc: dto.monDesc, monTimeOff: dto.monTimeOff,
+      tueHours: dto.tueHours, tueDesc: dto.tueDesc, tueTimeOff: dto.tueTimeOff,
+      wedHours: dto.wedHours, wedDesc: dto.wedDesc, wedTimeOff: dto.wedTimeOff,
+      thuHours: dto.thuHours, thuDesc: dto.thuDesc, thuTimeOff: dto.thuTimeOff,
+      friHours: dto.friHours, friDesc: dto.friDesc, friTimeOff: dto.friTimeOff,
+      satHours: dto.satHours, satDesc: dto.satDesc, satTimeOff: dto.satTimeOff,
+      sunHours: dto.sunHours, sunDesc: dto.sunDesc, sunTimeOff: dto.sunTimeOff,
       totalHours,
     },
     include: { project: true },
@@ -357,13 +357,13 @@ export async function updateEntry(
   timesheetId: number, entryId: number, userId: number, orgId: number,
   dto: Partial<{
     projectId: number; billable: boolean;
-    monHours: number; monDesc: string;
-    tueHours: number; tueDesc: string;
-    wedHours: number; wedDesc: string;
-    thuHours: number; thuDesc: string;
-    friHours: number; friDesc: string;
-    satHours: number; satDesc: string;
-    sunHours: number; sunDesc: string;
+    monHours: number; monDesc: string; monTimeOff: number;
+    tueHours: number; tueDesc: string; tueTimeOff: number;
+    wedHours: number; wedDesc: string; wedTimeOff: number;
+    thuHours: number; thuDesc: string; thuTimeOff: number;
+    friHours: number; friDesc: string; friTimeOff: number;
+    satHours: number; satDesc: string; satTimeOff: number;
+    sunHours: number; sunDesc: string; sunTimeOff: number;
   }>,
   userRole: UserRole
 ) {
@@ -387,20 +387,27 @@ export async function updateEntry(
   }
 
   const merged = {
-    monHours: dto.monHours ?? entry.monHours,
-    monDesc:  'monDesc' in dto ? dto.monDesc : entry.monDesc,
-    tueHours: dto.tueHours ?? entry.tueHours,
-    tueDesc:  'tueDesc' in dto ? dto.tueDesc : entry.tueDesc,
-    wedHours: dto.wedHours ?? entry.wedHours,
-    wedDesc:  'wedDesc' in dto ? dto.wedDesc : entry.wedDesc,
-    thuHours: dto.thuHours ?? entry.thuHours,
-    thuDesc:  'thuDesc' in dto ? dto.thuDesc : entry.thuDesc,
-    friHours: dto.friHours ?? entry.friHours,
-    friDesc:  'friDesc' in dto ? dto.friDesc : entry.friDesc,
-    satHours: dto.satHours ?? entry.satHours,
-    satDesc:  'satDesc' in dto ? dto.satDesc : entry.satDesc,
-    sunHours: dto.sunHours ?? entry.sunHours,
-    sunDesc:  'sunDesc' in dto ? dto.sunDesc : entry.sunDesc,
+    monHours:   dto.monHours   ?? entry.monHours,
+    monDesc:    'monDesc'   in dto ? dto.monDesc   : entry.monDesc,
+    monTimeOff: dto.monTimeOff ?? entry.monTimeOff,
+    tueHours:   dto.tueHours   ?? entry.tueHours,
+    tueDesc:    'tueDesc'   in dto ? dto.tueDesc   : entry.tueDesc,
+    tueTimeOff: dto.tueTimeOff ?? entry.tueTimeOff,
+    wedHours:   dto.wedHours   ?? entry.wedHours,
+    wedDesc:    'wedDesc'   in dto ? dto.wedDesc   : entry.wedDesc,
+    wedTimeOff: dto.wedTimeOff ?? entry.wedTimeOff,
+    thuHours:   dto.thuHours   ?? entry.thuHours,
+    thuDesc:    'thuDesc'   in dto ? dto.thuDesc   : entry.thuDesc,
+    thuTimeOff: dto.thuTimeOff ?? entry.thuTimeOff,
+    friHours:   dto.friHours   ?? entry.friHours,
+    friDesc:    'friDesc'   in dto ? dto.friDesc   : entry.friDesc,
+    friTimeOff: dto.friTimeOff ?? entry.friTimeOff,
+    satHours:   dto.satHours   ?? entry.satHours,
+    satDesc:    'satDesc'   in dto ? dto.satDesc   : entry.satDesc,
+    satTimeOff: dto.satTimeOff ?? entry.satTimeOff,
+    sunHours:   dto.sunHours   ?? entry.sunHours,
+    sunDesc:    'sunDesc'   in dto ? dto.sunDesc   : entry.sunDesc,
+    sunTimeOff: dto.sunTimeOff ?? entry.sunTimeOff,
   };
   const totalHours = calcEntryTotal(merged);
 

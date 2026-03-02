@@ -126,7 +126,11 @@ export async function submitTimesheet(id: number, userId: number, orgId: number)
 
   return prisma.timesheet.update({
     where: { id },
-    data: { status: TimesheetStatus.SUBMITTED },
+    data: {
+      status: TimesheetStatus.SUBMITTED,
+      // Clear rejection reason when employee re-submits after a rejection
+      ...(timesheet.status === TimesheetStatus.REJECTED && { rejectedReason: null }),
+    },
   });
 }
 

@@ -190,7 +190,9 @@ export async function generateMonthlyTimesheetData(
           dayHours += hours;
           const pName = entry.project?.name ?? '';
           if (pName && !projectNames.includes(pName)) projectNames.push(pName);
-          if (entry.description && !taskDescs.includes(entry.description)) taskDescs.push(entry.description);
+          const dayDescKey = dayKey.replace('Hours', 'Desc') as keyof typeof entry;
+          const desc = entry[dayDescKey] as string | null | undefined;
+          if (desc && !taskDescs.includes(desc)) taskDescs.push(desc);
 
           // Detect leave rows by project name/code convention
           const pLower = pName.toLowerCase();

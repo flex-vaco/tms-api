@@ -98,7 +98,7 @@ export async function loginUser(dto: LoginDto): Promise<AuthResult> {
   };
 }
 
-export async function refreshAccessToken(incomingRefreshToken: string): Promise<{ accessToken: string; refreshToken: string; userId: number }> {
+export async function refreshAccessToken(incomingRefreshToken: string): Promise<{ accessToken: string; refreshToken: string; user: AuthResult['user'] }> {
   const secret = process.env.JWT_REFRESH_SECRET!;
   let payload: JwtPayload;
 
@@ -130,7 +130,11 @@ export async function refreshAccessToken(incomingRefreshToken: string): Promise<
     data: { refreshToken: await bcrypt.hash(refreshToken, BCRYPT_ROUNDS) },
   });
 
-  return { accessToken, refreshToken, userId: user.id };
+  return {
+    accessToken,
+    refreshToken,
+    user: { userId: user.id, orgId: user.organisationId, role: user.role, name: user.name, email: user.email },
+  };
 }
 
 export async function logoutUser(userId: number): Promise<void> {

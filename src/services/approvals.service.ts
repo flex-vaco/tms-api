@@ -71,7 +71,7 @@ export async function getApprovalStats(orgId: number, userId: number, userRole: 
   ]);
 
   return {
-    pending,
+    pendingCount: pending,
     approvedThisWeek,
     teamHours: teamEntries._sum.totalHours ?? 0,
     teamMembers,
